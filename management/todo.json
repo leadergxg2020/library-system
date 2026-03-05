@@ -1,0 +1,495 @@
+{
+  "project": "图书借阅管理系统",
+  "created_at": "2026-03-05",
+  "total": 25,
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "后端项目初始化",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [],
+      "definition_of_done": "Spring Boot 应用可以启动，数据库连接成功，/actuator/health 返回 UP",
+      "acceptance": [
+        "pom.xml 包含 spring-boot-starter-web、mybatis-plus-boot-starter、mysql-connector-j、lombok、spring-boot-starter-actuator 依赖",
+        "application.yml 配置数据库连接（url/username/password）、MyBatis-Plus 下划线转驼峰映射、分页插件 bean",
+        "执行 mvn spring-boot:run 可成功启动且控制台无 ERROR 日志",
+        "访问 GET /actuator/health 返回 HTTP 200，body 含 status: UP"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T002",
+      "title": "数据库初始化",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [],
+      "definition_of_done": "数据库中 book、reader、borrow_record 三张表成功创建，包含全部字段、索引和注释",
+      "acceptance": [
+        "执行 schema.sql 后 MySQL 中存在 book 表，含 id、isbn、title、author、press、total_count、available_count、created_at、updated_at 字段",
+        "reader 表含 id、name、phone、email、borrowed_count、ban_until、created_at、updated_at 字段",
+        "borrow_record 表含 id、book_id、reader_id、borrow_date、due_date、return_date、created_at、updated_at 字段",
+        "isbn、phone 等唯一性字段建有唯一索引，book_id、reader_id 建有普通索引",
+        "所有表和字段包含中文注释"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T003",
+      "title": "公共组件实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T001"
+      ],
+      "definition_of_done": "公共响应封装、异常体系、分页结构、MyBatis-Plus 配置均实现完毕，全局异常拦截可正常工作",
+      "acceptance": [
+        "Result<T> 类含 code、message、data 三字段，提供 success() 和 fail() 静态工厂方法",
+        "PageResult<T> 类含 list、total、pageNum、pageSize 字段",
+        "BusinessException 继承 RuntimeException，携带 ErrorCode 枚举",
+        "ErrorCode 枚举至少定义 BOOK_NOT_FOUND、READER_NOT_FOUND、BORROW_LIMIT_EXCEEDED、BOOK_OUT_OF_STOCK、READER_BANNED、BORROW_RECORD_NOT_FOUND、ISBN_DUPLICATE、PARAM_ERROR 错误码",
+        "GlobalExceptionHandler 使用 @RestControllerAdvice 拦截 BusinessException 和 MethodArgumentNotValidException，返回标准 Result 格式",
+        "MyMetaObjectHandler 实现自动填充 created_at 和 updated_at",
+        "MybatisPlusConfig 注册 MybatisPlusInterceptor 分页插件（DbType.MYSQL）",
+        "WebMvcConfig 配置全局跨域（CORS），允许前端开发服务器访问"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T004",
+      "title": "前端项目初始化",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [],
+      "definition_of_done": "前端项目可通过 npm run dev 启动，访问 localhost:5173 显示基础页面骨架，axios 请求拦截器配置完成",
+      "acceptance": [
+        "package.json 包含 vue、vite、typescript、element-plus、pinia、axios、vue-router 依赖",
+        "vite.config.ts 配置 proxy 将 /api 转发到后端 localhost:8080",
+        "src/api/request.ts 封装 axios 实例，配置 baseURL=/api、超时时间，请求拦截器设置 Content-Type，响应拦截器统一处理错误并弹出 ElMessage 提示",
+        "src/router/index.ts 包含路由骨架（至少定义 /books、/readers、/borrow、/overdue 四个路由占位）",
+        "main.ts 中正确注册 ElementPlus、Pinia、Router",
+        "执行 npm run dev 无编译错误，浏览器可访问首页"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T005",
+      "title": "实体类实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T001",
+        "T002"
+      ],
+      "definition_of_done": "BookPO、ReaderPO、BorrowRecordPO 三个实体类实现完毕，MyBatis-Plus 注解正确，字段与数据库表一一对应",
+      "acceptance": [
+        "BookPO 使用 @TableName(\"book\")，主键用 @TableId(type=IdType.AUTO)，字段用 @TableField，包含 isbn、title、author、press、totalCount、availableCount、createdAt、updatedAt",
+        "ReaderPO 使用 @TableName(\"reader\")，包含 name、phone、email、borrowedCount、banUntil、createdAt、updatedAt 字段",
+        "BorrowRecordPO 使用 @TableName(\"borrow_record\")，包含 bookId、readerId、borrowDate、dueDate、returnDate、createdAt、updatedAt 字段",
+        "createdAt 字段使用 @TableField(fill=FieldFill.INSERT)，updatedAt 使用 @TableField(fill=FieldFill.INSERT_UPDATE) 配置自动填充",
+        "所有实体类使用 @Data、@NoArgsConstructor 等 Lombok 注解"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T006",
+      "title": "Mapper实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T005"
+      ],
+      "definition_of_done": "BookMapper、ReaderMapper、BorrowRecordMapper 实现完毕，继承 BaseMapper，自定义 SQL 注解方法通过 MyBatis-Plus 可正常查询",
+      "acceptance": [
+        "BookMapper 继承 BaseMapper<BookPO>，使用 @Select 注解实现按 isbn 查询方法 findByIsbn(String isbn)",
+        "ReaderMapper 继承 BaseMapper<ReaderPO>，使用 @Select 注解实现按 phone 查询方法 findByPhone(String phone)",
+        "BorrowRecordMapper 继承 BaseMapper<BorrowRecordPO>，使用 @Select 注解实现 findActiveByReaderAndBook(Long readerId, Long bookId)（查找未还记录）、findOverdueRecords()（查找所有逾期未还记录，JOIN book 和 reader 表）",
+        "所有 Mapper 接口标注 @Mapper 注解",
+        "Spring Boot 启动时 Mapper Bean 可被正常注入，无 SQL 语法错误"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T007",
+      "title": "BookService实现（CRUD）",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T005",
+        "T006",
+        "T003"
+      ],
+      "definition_of_done": "BookService 中 createBook、listBooks、updateBook、deleteBook 四个方法实现完毕，业务规则完整",
+      "acceptance": [
+        "createBook(BookCreateDTO) 校验 ISBN 唯一性，若重复抛出 BusinessException(ISBN_DUPLICATE)，保存成功后返回 BookVO",
+        "listBooks(String keyword, int pageNum, int pageSize) 支持按 title 或 author 模糊查询，返回 PageResult<BookVO>，keyword 为空时查全部",
+        "updateBook(Long id, BookUpdateDTO) 校验图书存在，更新 title、author、press、totalCount，同步调整 availableCount（availableCount = 原availableCount + 新totalCount - 原totalCount），返回 BookVO",
+        "deleteBook(Long id) 校验图书存在，若有未归还借阅记录则抛出 BusinessException 拒绝删除，否则执行删除",
+        "@Service 注解标注，@Transactional 在需要事务的方法上正确添加"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T008",
+      "title": "BookService-CSV批量导入",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T007"
+      ],
+      "definition_of_done": "importBooks 方法实现完毕，可正确解析 CSV 文件，处理 ISBN 冲突，返回导入结果汇总",
+      "acceptance": [
+        "importBooks(MultipartFile file) 校验文件非空且扩展名为 .csv，否则抛出 BusinessException(PARAM_ERROR)",
+        "CSV 第一行作为表头跳过，按列顺序解析 isbn、title、author、press、totalCount",
+        "每行解析后校验必填字段（isbn/title/author/totalCount 不为空，totalCount 为正整数），校验失败记录行号和原因到失败列表",
+        "ISBN 已存在的行记录为冲突跳过，不更新现有数据，冲突原因记入 failReasons",
+        "返回 ImportResultVO 包含 successCount、failCount、List<String> failReasons（含行号和原因）",
+        "整个方法在事务中执行，单行失败不回滚已成功行"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T009",
+      "title": "BookController实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T007",
+        "T008"
+      ],
+      "definition_of_done": "BookController 5个接口全部实现，DTO/VO 定义完整，@Valid 校验生效，通过 curl 或 Postman 可调用成功",
+      "acceptance": [
+        "POST /api/books 接收 BookCreateDTO（isbn/title/author/press/totalCount），@NotBlank/@NotNull/@Min 校验，调用 createBook，返回 Result<BookVO>",
+        "GET /api/books 接收 keyword（可选）、pageNum（默认1）、pageSize（默认10）查询参数，返回 Result<PageResult<BookVO>>",
+        "PUT /api/books/{id} 接收 BookUpdateDTO（title/author/press/totalCount 可选字段），返回 Result<BookVO>",
+        "DELETE /api/books/{id} 返回 Result<Void>",
+        "POST /api/books/import 接收 MultipartFile（参数名 file），返回 Result<ImportResultVO>",
+        "BookCreateDTO 含 @NotBlank isbn、@NotBlank title、@NotBlank author、press（可选）、@NotNull @Min(1) totalCount",
+        "BookVO 含 id、isbn、title、author、press、totalCount、availableCount、createdAt",
+        "所有接口在参数校验失败时返回标准错误 Result，HTTP 状态码 400"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T010",
+      "title": "ReaderService实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T005",
+        "T006",
+        "T003"
+      ],
+      "definition_of_done": "ReaderService 中 createReader、listReaders、updateReader 三个方法实现完毕，业务规则完整",
+      "acceptance": [
+        "createReader(ReaderCreateDTO) 校验手机号唯一性，若重复抛出 BusinessException，保存成功后返回 ReaderVO",
+        "listReaders(String keyword, int pageNum, int pageSize) 支持按 name 或 phone 模糊查询，返回 PageResult<ReaderVO>，keyword 为空时查全部",
+        "updateReader(Long id, ReaderUpdateDTO) 校验读者存在，支持更新 name、email、phone（phone 更新时重新校验唯一性），返回 ReaderVO",
+        "ReaderVO 包含 id、name、phone、email、borrowedCount、banUntil、isBanned（当前日期早于 banUntil 为 true）、createdAt",
+        "@Service 注解标注"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T011",
+      "title": "ReaderController实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T010"
+      ],
+      "definition_of_done": "ReaderController 3个接口全部实现，DTO/VO 定义完整，@Valid 校验生效",
+      "acceptance": [
+        "POST /api/readers 接收 ReaderCreateDTO（name/phone/email），@NotBlank 校验 name 和 phone，@Email 校验 email（可选），返回 Result<ReaderVO>",
+        "GET /api/readers 接收 keyword（可选）、pageNum（默认1）、pageSize（默认10），返回 Result<PageResult<ReaderVO>>",
+        "PUT /api/readers/{id} 接收 ReaderUpdateDTO（name/phone/email 均可选），返回 Result<ReaderVO>",
+        "ReaderCreateDTO 含 @NotBlank name、@NotBlank @Pattern(手机号格式 1[3-9]\\d{9}) phone、@Email email（可选）",
+        "所有接口在参数校验失败时返回标准错误 Result"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T012",
+      "title": "BorrowService-借书",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T007",
+        "T010",
+        "T006",
+        "T003"
+      ],
+      "definition_of_done": "borrowBook 方法实现完毕，完整业务校验和事务控制，成功借书后库存和读者借书数同步更新",
+      "acceptance": [
+        "borrowBook(BorrowRequest) 接收 readerId 和 isbn",
+        "校验读者存在，不存在抛出 BusinessException(READER_NOT_FOUND)",
+        "校验读者未处于禁借期（banUntil 为空或早于当前日期），否则抛出 BusinessException(READER_BANNED)，message 中包含禁借截止日期",
+        "校验读者当前借书数 borrowedCount < 5，否则抛出 BusinessException(BORROW_LIMIT_EXCEEDED)",
+        "校验图书存在且 availableCount > 0，否则分别抛出 BOOK_NOT_FOUND 或 BOOK_OUT_OF_STOCK",
+        "创建 BorrowRecordPO，borrowDate=today，dueDate=today+30天，returnDate=null",
+        "book.availableCount - 1，reader.borrowedCount + 1",
+        "整个方法使用 @Transactional，返回 BorrowSuccessVO"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T013",
+      "title": "BorrowService-还书",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T012"
+      ],
+      "definition_of_done": "returnBook 方法实现完毕，正确处理超期逻辑，禁借惩罚规则生效，事务完整",
+      "acceptance": [
+        "returnBook(BorrowRequest) 接收 readerId 和 isbn",
+        "查找该读者对该 ISBN 图书的未还借阅记录（return_date IS NULL），不存在抛出 BusinessException(BORROW_RECORD_NOT_FOUND)",
+        "设置 returnDate = today",
+        "计算是否超期：returnDate > dueDate 为超期",
+        "超期时计算逾期天数（DAYS between dueDate and returnDate），设置 reader.banUntil = today + 逾期天数",
+        "book.availableCount + 1，reader.borrowedCount - 1",
+        "整个方法使用 @Transactional",
+        "返回 ReturnResultVO，包含 isOverdue（boolean）、overdueDays（int）、banUntil（LocalDate，仅超期时有值）、bookTitle、readerName"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T014",
+      "title": "BorrowService-逾期列表",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T006",
+        "T003"
+      ],
+      "definition_of_done": "listOverdue 方法实现完毕，正确查询所有当前仍未归还且已超过 due_date 的借阅记录",
+      "acceptance": [
+        "listOverdue() 调用 BorrowRecordMapper.findOverdueRecords() 查询条件为 due_date < CURDATE() AND return_date IS NULL",
+        "返回 List<OverdueRecordVO>，OverdueRecordVO 包含 borrowRecordId、bookIsbn、bookTitle、readerName、readerPhone、dueDate、overdueDays（DATEDIFF(CURDATE(), due_date)）",
+        "结果按逾期天数降序排列",
+        "findOverdueRecords() 使用 @Select 注解 JOIN book 和 reader 表，一次查询获取所有需要展示的字段"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T015",
+      "title": "BorrowController实现",
+      "layer": "backend",
+      "status": "DONE",
+      "depends_on": [
+        "T012",
+        "T013",
+        "T014"
+      ],
+      "definition_of_done": "BorrowController 3个接口全部实现，DTO/VO 定义完整",
+      "acceptance": [
+        "POST /api/borrows 接收 BorrowRequest（@NotNull readerId、@NotBlank isbn），调用 borrowBook，返回 Result<BorrowSuccessVO>",
+        "POST /api/borrows/return 接收 BorrowRequest（@NotNull readerId、@NotBlank isbn），调用 returnBook，返回 Result<ReturnResultVO>",
+        "GET /api/borrows/overdue 无参数，调用 listOverdue，返回 Result<List<OverdueRecordVO>>",
+        "BorrowSuccessVO 包含 id、bookIsbn、bookTitle、readerName、borrowDate、dueDate",
+        "所有业务异常均通过 GlobalExceptionHandler 转换为标准 Result 返回"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T016",
+      "title": "前端API层和类型定义",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T004"
+      ],
+      "definition_of_done": "types/api.ts 中所有 VO/DTO TypeScript 类型定义完毕，api/book.ts、api/reader.ts、api/borrow.ts 封装完毕，TypeScript 编译无错误",
+      "acceptance": [
+        "types/api.ts 定义 BookVO、BookCreateDTO、BookUpdateDTO、ReaderVO、ReaderCreateDTO、ReaderUpdateDTO、BorrowSuccessVO、BorrowRequest、BorrowRequest、ReturnResultVO、OverdueRecordVO、ImportResultVO、PageResult<T>、Result<T> 接口",
+        "api/book.ts 导出 getBooks(keyword, pageNum, pageSize)、createBook(dto)、updateBook(id, dto)、deleteBook(id)、importBooks(formData) 五个函数",
+        "api/reader.ts 导出 getReaders(keyword, pageNum, pageSize)、createReader(dto)、updateReader(id, dto) 三个函数",
+        "api/borrow.ts 导出 borrowBook(dto)、returnBook(dto)、getOverdueList() 三个函数",
+        "所有 api 函数使用 request.ts 中的 axios 实例，返回类型正确标注",
+        "执行 npx tsc --noEmit 无类型错误"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T017",
+      "title": "图书列表页",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T016",
+        "T009"
+      ],
+      "definition_of_done": "BookList.vue 实现完毕，分页列表、关键字搜索、新增/修改/删除操作均可正常使用",
+      "acceptance": [
+        "页面加载时调用 getBooks API 展示图书列表，包含 ISBN、书名、作者、出版社、总量、可借量、操作列",
+        "顶部搜索框输入关键字后点击搜索按钮触发查询，搜索框清空后可重置列表",
+        "底部 ElPagination 组件支持切换页码和每页条数（10/20/50），分页参数变化时重新请求",
+        "点击「新增」按钮弹出 BookForm.vue 对话框（新增模式）",
+        "点击「修改」按钮弹出 BookForm.vue 并回填当前行数据（编辑模式）",
+        "点击「删除」按钮弹出 ElMessageBox 确认，确认后调用 deleteBook API，成功后刷新列表并显示成功提示",
+        "API 请求期间列表展示 loading 状态"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T018",
+      "title": "图书表单组件",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T017"
+      ],
+      "definition_of_done": "BookForm.vue 实现完毕，新增和编辑模式均可正常使用，表单校验生效",
+      "acceptance": [
+        "组件通过 props 接收 visible（boolean）和 bookData（BookVO | null），emit update:visible 和 success 事件",
+        "bookData 为 null 时为新增模式（标题「新增图书」）；非 null 时为编辑模式（标题「编辑图书」，回填数据）",
+        "编辑模式下 ISBN 字段禁用",
+        "表单包含 ISBN（新增必填）、书名（必填）、作者（必填）、出版社（选填）、总量（必填，正整数）字段",
+        "点击确认触发 ElForm 校验，校验通过后调用对应 API，成功后 emit success 事件并关闭对话框",
+        "提交期间确认按钮显示 loading 状态，防止重复提交",
+        "点击取消或关闭对话框时重置表单"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T019",
+      "title": "CSV批量导入组件",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T018"
+      ],
+      "definition_of_done": "ImportDialog.vue 实现完毕，文件选择、上传、结果展示流程完整",
+      "acceptance": [
+        "组件通过 props 接收 visible（boolean），emit update:visible 和 success 事件",
+        "展示 ElUpload 组件，限制文件类型为 .csv，手动触发上传（不自动上传）",
+        "点击「开始导入」按钮调用 importBooks API，上传期间显示 loading",
+        "导入完成后在对话框内展示结果：成功条数、失败条数、失败原因列表（若有）",
+        "展示结果后「开始导入」变为「关闭」，点击关闭时若 successCount > 0 则 emit success，关闭对话框",
+        "BookList.vue 的「批量导入」按钮可打开此对话框，导入成功后刷新图书列表"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T020",
+      "title": "读者列表页",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T016",
+        "T011"
+      ],
+      "definition_of_done": "ReaderList.vue 实现完毕，分页列表、关键字搜索、注册/修改操作、禁借状态展示均正常",
+      "acceptance": [
+        "页面加载时调用 getReaders API 展示读者列表，包含姓名、手机号、邮箱、当前借书数、禁借状态、禁借截止日期、操作列",
+        "禁借状态列：isBanned 为 true 时显示红色「禁借中」标签及 banUntil 日期，否则显示绿色「正常」标签",
+        "顶部搜索框支持按姓名或手机号关键字搜索",
+        "底部 ElPagination 支持分页",
+        "点击「注册读者」按钮弹出 ReaderForm.vue（新增模式）",
+        "点击「修改」按钮弹出 ReaderForm.vue（编辑模式，回填数据）",
+        "API 请求期间展示 loading 状态"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T021",
+      "title": "读者表单组件",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T020"
+      ],
+      "definition_of_done": "ReaderForm.vue 实现完毕，注册和编辑模式均正常，表单校验生效",
+      "acceptance": [
+        "组件通过 props 接收 visible（boolean）和 readerData（ReaderVO | null），emit update:visible 和 success 事件",
+        "readerData 为 null 时为注册模式（标题「注册读者」），非 null 时为编辑模式（标题「编辑读者」，回填数据）",
+        "表单包含姓名（必填）、手机号（必填，格式校验 1[3-9]\\d{9}）、邮箱（选填，格式校验）字段",
+        "点击确认触发表单校验，通过后调用对应 API，成功后 emit success 并关闭",
+        "提交期间确认按钮显示 loading，关闭时重置表单"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T022",
+      "title": "借书表单",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T016",
+        "T015"
+      ],
+      "definition_of_done": "BorrowForm.vue 实现完毕，读者信息和图书信息实时展示，借书操作正常",
+      "acceptance": [
+        "BorrowManage.vue 页面包含借书区域，内嵌或引用 BorrowForm.vue",
+        "读者ID输入框（数字）：输入完整后（失焦或按回车）调用 getReaders 查询并展示读者姓名、当前借书数、禁借状态",
+        "ISBN输入框：输入后失焦或按回车展示书名和当前可借数量",
+        "读者处于禁借期或图书无库存时，确认按钮禁用并在输入框下方显示原因提示",
+        "点击「确认借出」调用 borrowBook API，成功后显示成功消息并清空表单",
+        "API 返回业务异常时（如超出借书上限），通过 ElMessage.error 展示错误信息"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T023",
+      "title": "还书表单",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T022"
+      ],
+      "definition_of_done": "ReturnForm.vue 实现完毕，未还记录展示、还书操作、超期提示均正常",
+      "acceptance": [
+        "BorrowManage.vue 页面包含还书区域，内嵌或引用 ReturnForm.vue",
+        "ISBN输入框和读者ID输入框：两者均填写后展示对应未还借阅记录（借书日期、应还日期）",
+        "点击「确认还书」调用 returnBook API，成功后若 isOverdue 为 true，用 ElAlert 或 ElMessageBox 展示超期提示：逾期X天，禁借至YYYY-MM-DD",
+        "不超期时显示归还成功消息，清空表单",
+        "若 API 返回记录不存在错误，展示对应错误信息"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T024",
+      "title": "逾期列表页",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T016",
+        "T015"
+      ],
+      "definition_of_done": "OverdueList.vue 实现完毕，逾期记录列表展示正确，按逾期天数降序排列",
+      "acceptance": [
+        "页面加载时调用 getOverdueList API 展示逾期列表",
+        "列表包含7个字段列：图书ISBN、书名、读者姓名、读者手机号、借书日期、应还日期、逾期天数",
+        "逾期天数列数值以红色或警告色高亮展示，列表已按逾期天数降序排列（与后端返回顺序一致）",
+        "列表为空时展示「暂无逾期记录」空状态提示（ElEmpty 组件）",
+        "页面顶部有「刷新」按钮可重新拉取数据",
+        "API 请求期间展示 loading 状态"
+      ],
+      "retry_count": 0
+    },
+    {
+      "id": "T025",
+      "title": "前端路由与布局整合",
+      "layer": "frontend",
+      "status": "DONE",
+      "depends_on": [
+        "T017",
+        "T020",
+        "T022",
+        "T024"
+      ],
+      "definition_of_done": "router/index.ts 配置完整，侧边导航菜单正确跳转，整体布局美观，所有页面可通过菜单正常访问",
+      "acceptance": [
+        "router/index.ts 配置四个路由：/books → BookList.vue、/readers → ReaderList.vue、/borrow → BorrowManage.vue、/overdue → OverdueList.vue，默认重定向 / → /books",
+        "App.vue 使用 ElContainer 实现侧边导航 + 主内容区布局",
+        "左侧 ElMenu 包含「图书管理」、「读者管理」、「借还管理」、「逾期列表」四个菜单项，点击正确跳转对应路由",
+        "当前激活路由对应菜单项高亮显示（:default-active 绑定当前路由路径）",
+        "顶部包含系统名称「图书借阅管理系统」标题栏",
+        "页面在 1280px 宽度下布局正常，无横向滚动条",
+        "执行 npm run build 无编译错误"
+      ],
+      "retry_count": 0
+    }
+  ],
+  "phases": {}
+}
