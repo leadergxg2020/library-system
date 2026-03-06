@@ -212,6 +212,50 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments \
 已确认：现有实现满足此要求，无需改动。{可选：补充说明}
 ```
 
+**7.5 Resolve 已修复的评论线程**
+
+对每条已修复的评论，在回复后立即通过 GraphQL API 将其线程标记为 Resolved。
+
+第一步：获取所有 Review Thread 的 GraphQL node ID（用于与第四步的 REST comment id 对应）：
+
+```bash
+gh api graphql -f query='
+{
+  repository(owner: "{owner}", name: "{repo}") {
+    pullRequest(number: {number}) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          comments(first: 1) {
+            nodes {
+              databaseId
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+```
+
+通过 `comments.nodes[0].databaseId` 与第四步 REST 返回的 `id` 字段匹配，找到每条已修复评论对应的 thread `id`。
+
+第二步：逐条 Resolve：
+
+```bash
+gh api graphql -f query='
+mutation {
+  resolveReviewThread(input: {threadId: "{threadId}"}) {
+    thread {
+      isResolved
+    }
+  }
+}'
+```
+
+只对**已修复**的评论执行 Resolve；已跳过或已解决（无需改动）的评论不 Resolve，保留线程供后续讨论。
+
 ### 第八步：若无"必须修复"项，询问后续操作
 
 ```
