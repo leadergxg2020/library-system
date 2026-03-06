@@ -17,6 +17,15 @@ public class AdminPO {
     /** 管理员用户名，唯一 */
     private String username;
 
+    /** 员工号，可空，唯一 */
+    private String employeeId;
+
+    /** 联系电话（11位手机号），可空 */
+    private String phone;
+
+    /** 邮箱地址，可空 */
+    private String email;
+
     /** 密码盐值（每用户独立随机生成） */
     private String salt;
 

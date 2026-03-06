@@ -70,12 +70,15 @@ CREATE INDEX IF NOT EXISTS idx_reader_id          ON t_borrow_record(reader_id);
 -- 表 4：t_admin（管理员账号表）
 -- ============================================================
 CREATE TABLE IF NOT EXISTS t_admin (
-    id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    username   TEXT    NOT NULL UNIQUE,
-    salt       TEXT    NOT NULL,
-    password   TEXT    NOT NULL,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+    id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    username    TEXT    NOT NULL UNIQUE,
+    employee_id TEXT    UNIQUE,              -- 员工号，可空，唯一
+    phone       TEXT,                        -- 联系电话（11位手机号）
+    email       TEXT,                        -- 邮箱地址
+    salt        TEXT    NOT NULL,
+    password    TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    updated_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
 -- 默认管理员：用户名 admin，密码 admin123
