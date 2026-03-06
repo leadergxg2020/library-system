@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '@/router'
 
 // 统一响应格式
 export interface ApiResponse<T = unknown> {
@@ -40,6 +41,13 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
     const { data } = response
+    if (data.code === 401) {
+      // 未登录，跳转登录页（避免在登录页重复跳转）
+      if (router.currentRoute.value.name !== 'Login') {
+        router.push('/login')
+      }
+      return Promise.reject(new Error(data.message))
+    }
     if (data.code !== 200) {
       ElMessage.error(data.message || '操作失败')
       return Promise.reject(new Error(data.message))

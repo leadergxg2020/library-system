@@ -67,6 +67,25 @@ CREATE INDEX IF NOT EXISTS idx_reader_id          ON t_borrow_record(reader_id);
 
 
 -- ============================================================
+-- 表 4：t_admin（管理员账号表）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS t_admin (
+    id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    username   TEXT    NOT NULL UNIQUE,
+    salt       TEXT    NOT NULL,
+    password   TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+-- 默认管理员：用户名 admin，密码 admin123
+-- salt = 'default_salt_2026', password = SHA-256(salt + raw_password)
+-- 此哈希值对应 SHA-256("default_salt_2026" + "admin123")
+INSERT OR IGNORE INTO t_admin (username, salt, password) VALUES
+    ('admin', 'default_salt_2026', '5bc704e16221f2a7ea78e39691a454290b3d4dc064d0e73bdb68c10d3b2b87c6');
+
+
+-- ============================================================
 -- 初始化示例数据（INSERT OR IGNORE 保证重启不重复插入）
 -- ============================================================
 INSERT OR IGNORE INTO t_book (isbn, title, author, publisher, total_quantity, available_quantity) VALUES
