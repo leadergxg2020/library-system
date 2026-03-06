@@ -1,7 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { title: '登录', requiresAuth: false }
+  },
   {
     path: '/',
     redirect: '/books'
@@ -41,6 +48,19 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// 导航守卫：未登录时跳转到登录页
+router.beforeEach(async (to) => {
+  if (to.meta.requiresAuth === false) return true
+  const authStore = useAuthStore()
+  if (!authStore.isLoggedIn) {
+    await authStore.fetchMe()
+  }
+  if (!authStore.isLoggedIn) {
+    return { name: 'Login' }
+  }
+  return true
 })
 
 export default router
